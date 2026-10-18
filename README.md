@@ -9,6 +9,27 @@ guardan en el propio navegador (`localStorage`). Publicada en GitHub Pages.
 
 🔗 **App en producción:** https://amarchanh.github.io/food-track/
 
+## Acceso
+
+La app pide usuario y contraseña antes de mostrar nada (ver `src/auth/`).
+**No es seguridad real**: al ser una SPA estática en GitHub Pages público, el
+código de comprobación lo puede leer o sortear cualquiera con las
+herramientas de desarrollador del navegador. Solo sirve para que no entre
+cualquiera que encuentre el enlace por casualidad (buscadores, etc.).
+
+La contraseña no se guarda en texto plano en el repo, solo su hash SHA-256
+con sal. Para cambiarla, genera un nuevo hash y sustitúyelo en
+`src/auth/credentials.ts`:
+
+```bash
+node -e "
+const c = require('crypto')
+const salt = 'ft_' + c.randomBytes(4).toString('hex')
+const hash = c.createHash('sha256').update(salt + 'TU_NUEVA_CONTRASEÑA').digest('hex')
+console.log({ salt, hash })
+"
+```
+
 ## Funcionalidades
 
 - **Registro diario**: añade alimentos por desayuno/comida/cena/snack,
