@@ -33,8 +33,10 @@ console.log({ salt, hash })
 ## Funcionalidades
 
 - **Registro diario**: añade alimentos por desayuno/comida/cena/snack,
-  buscando en una base de datos local de alimentos comunes (`src/data/foods.ts`)
-  o creándolos manualmente.
+  buscando en una base de datos local de alimentos comunes (`src/data/foods.ts`),
+  **escaneando el código de barras** de un producto envasado (cámara del
+  móvil + búsqueda en Open Food Facts, incluye muchos productos Hacendado,
+  Mercadona, Lidl...) o creándolos manualmente.
 - **Objetivos**: define tus calorías diarias y el reparto de macros (%
   proteína/carbohidratos/grasas), con presets habituales (equilibrado, alta
   proteína, low carb...).
@@ -82,6 +84,17 @@ cambias el nombre del repositorio, actualiza esa constante.
   se puede llamar desde el navegador de una web estática sin un backend/proxy
   propio. Si falta algún alimento, se añade con "Añadir alimento manualmente"
   o ampliando `src/data/foods.ts`.
+- **Escáner de código de barras** (`src/components/BarcodeScanner.tsx` +
+  `src/search/barcodeLookup.ts`): usa la cámara vía `@zxing/browser` (no el
+  `BarcodeDetector` nativo, que Safari no soporta) y consulta el producto por
+  su código exacto en `GET /api/v2/product/{barcode}.json` de Open Food
+  Facts — ese endpoint concreto sí sigue funcionando con CORS correcto,
+  aunque sus endpoints de *búsqueda* no. No es una integración con las webs
+  de Lidl/Mercadona (no tienen API pública y no sería legítimo acceder a sus
+  APIs internas sin autorización); es una base de datos colaborativa que da
+  cobertura amplia a sus marcas propias (Hacendado, etc.). El componente del
+  escáner se carga de forma diferida (`React.lazy`) para no engordar la carga
+  inicial de la app.
 - PWA (manifest + service worker) vía `vite-plugin-pwa`.
 - Los iconos de la app se generan con `scripts/generate-icons.cjs` (PNG puro,
   sin dependencias nativas) — ejecútalo de nuevo si quieres cambiar el diseño.

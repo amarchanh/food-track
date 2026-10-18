@@ -1,7 +1,12 @@
-import { useMemo, useState } from 'react'
+import { lazy, Suspense, useMemo, useState } from 'react'
 import type { FoodItem } from '../types'
 import { searchFoods } from '../search/foodSearch'
+import { lookupBarcode } from '../search/barcodeLookup'
 import { useAppStore } from '../store'
+
+// The scanner pulls in @zxing/browser (~450 KB), so it's only downloaded
+// when someone actually opens it instead of bloating the main bundle.
+const BarcodeScanner = lazy(() => import('./BarcodeScanner').then((m) => ({ default: m.BarcodeScanner })))
 
 interface Props {
   title: string
@@ -24,6 +29,9 @@ export function FoodSearchSheet({ title, confirmLabel, onConfirm, onClose }: Pro
   const [selected, setSelected] = useState<FoodItem | null>(null)
   const [grams, setGrams] = useState(100)
   const [showManual, setShowManual] = useState(false)
+  const [showScanner, setShowScanner] = useState(false)
+  const [lookingUp, setLookingUp] = useState(false)
+  const [scanError, setScanError] = useState<string | null>(null)
   const customFoods = useAppStore((s) => s.customFoods)
   const addCustomFood = useAppStore((s) => s.addCustomFood)
 
@@ -34,6 +42,24 @@ export function FoodSearchSheet({ title, confirmLabel, onConfirm, onClose }: Pro
     if (q.length < 2) return []
     return customFoods.filter((f) => f.name.toLowerCase().includes(q))
   }, [customFoods, query])
+
+  async function handleBarcodeDetected(barcode: string) {
+    setShowScanner(false)
+    setLookingUp(true)
+    const result = await lookupBarcode(barcode)
+    setLookingUp(false)
+    if (!result.ok) {
+      setScanError(
+        result.reason === 'not-found' || result.reason === 'no-nutrition-data'
+          ? 'Ese producto no está en Open Food Facts. Pruébalo con el buscador o añádelo manualmente.'
+          : 'No se pudo consultar Open Food Facts ahora mismo.',
+      )
+      return
+    }
+    addCustomFood(result.food)
+    setScanError(null)
+    setSelected(result.food)
+  }
 
   if (selected) {
     const macros = {
@@ -78,6 +104,14 @@ export function FoodSearchSheet({ title, confirmLabel, onConfirm, onClose }: Pro
     )
   }
 
+  if (showScanner) {
+    return (
+      <Suspense fallback={<div className="modal-backdrop" />}>
+        <BarcodeScanner onDetected={handleBarcodeDetected} onClose={() => setShowScanner(false)} />
+      </Suspense>
+    )
+  }
+
   if (showManual) {
     return <ManualFoodForm onClose={() => setShowManual(false)} onSelect={(f) => { addCustomFood(f); setSelected(f) }} />
   }
@@ -100,6 +134,20 @@ export function FoodSearchSheet({ title, confirmLabel, onConfirm, onClose }: Pro
           />
         </div>
 
+        <button
+          className="btn-secondary"
+          style={{ width: '100%', marginBottom: 12 }}
+          onClick={() => {
+            setScanError(null)
+            setShowScanner(true)
+          }}
+        >
+          📷 Escanear código de barras
+        </button>
+
+        {lookingUp && <p className="entry-meta">Consultando Open Food Facts…</p>}
+        {scanError && <p className="empty-state">{scanError}</p>}
+
         {myMatches.length > 0 && (
           <>
             <div className="section-title">Tus alimentos</div>
@@ -107,7 +155,9 @@ export function FoodSearchSheet({ title, confirmLabel, onConfirm, onClose }: Pro
               <div key={f.id} className="search-result" onClick={() => setSelected(f)}>
                 <div>
                   <div className="name">{f.name}</div>
-                  <div className="meta">Personalizado</div>
+                  <div className="meta">
+                    {f.source === 'off' ? f.brand || 'Escaneado' : 'Personalizado'}
+                  </div>
                 </div>
                 <div className="kcal">{Math.round(f.per100.kcal)} kcal/100g</div>
               </div>
