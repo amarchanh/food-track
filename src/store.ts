@@ -101,7 +101,9 @@ export const useAppStore = create<AppState>()(
   ),
 )
 
+const EMPTY_ENTRIES: LogEntry[] = []
+
 export function useTodayEntries() {
   const date = todayKey()
-  return useAppStore((s) => s.logsByDate[date] ?? [])
+  return useAppStore((s) => s.logsByDate[date] ?? EMPTY_ENTRIES)
 }
