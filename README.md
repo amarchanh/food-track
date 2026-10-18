@@ -33,8 +33,8 @@ console.log({ salt, hash })
 ## Funcionalidades
 
 - **Registro diario**: añade alimentos por desayuno/comida/cena/snack,
-  buscando en la base de datos pública de [Open Food Facts](https://world.openfoodfacts.org/)
-  (como MyFitnessPal, sin necesidad de API key) o creándolos manualmente.
+  buscando en una base de datos local de alimentos comunes (`src/data/foods.ts`)
+  o creándolos manualmente.
 - **Objetivos**: define tus calorías diarias y el reparto de macros (%
   proteína/carbohidratos/grasas), con presets habituales (equilibrado, alta
   proteína, low carb...).
@@ -74,7 +74,14 @@ cambias el nombre del repositorio, actualiza esa constante.
 ## Notas técnicas
 
 - Estado persistido con `zustand` + `localStorage` (sin servidor).
-- Búsqueda de alimentos contra la API pública de Open Food Facts.
+- Búsqueda de alimentos: base de datos local embebida (`src/search/foodSearch.ts`
+  + `src/data/foods.ts`), no una API externa. Se intentó usar la API pública de
+  Open Food Facts, pero sus endpoints de búsqueda (`cgi/search.pl`,
+  `api/v2/search`) empezaron a devolver 503 de forma generalizada, y su
+  sustituto (`search.openfoodfacts.org`) no envía cabeceras CORS, así que no
+  se puede llamar desde el navegador de una web estática sin un backend/proxy
+  propio. Si falta algún alimento, se añade con "Añadir alimento manualmente"
+  o ampliando `src/data/foods.ts`.
 - PWA (manifest + service worker) vía `vite-plugin-pwa`.
 - Los iconos de la app se generan con `scripts/generate-icons.cjs` (PNG puro,
   sin dependencias nativas) — ejecútalo de nuevo si quieres cambiar el diseño.

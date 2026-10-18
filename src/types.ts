@@ -14,7 +14,7 @@ export interface FoodItem {
   brand?: string
   /** Nutrition per 100 g (or per 100 ml for liquids). */
   per100: Macros
-  source: 'off' | 'custom'
+  source: 'local' | 'custom'
 }
 
 export interface LogEntry {

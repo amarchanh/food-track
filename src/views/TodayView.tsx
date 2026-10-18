@@ -16,6 +16,7 @@ const SLOTS: { key: MealSlot; label: string }[] = [
 export function TodayView() {
   const entries = useTodayEntries()
   const addLogEntry = useAppStore((s) => s.addLogEntry)
+  const updateLogEntryGrams = useAppStore((s) => s.updateLogEntryGrams)
   const removeLogEntry = useAppStore((s) => s.removeLogEntry)
   const [searchOpenFor, setSearchOpenFor] = useState<MealSlot | null>(null)
 
@@ -39,9 +40,20 @@ export function TodayView() {
                 <div>
                   <div className="entry-name">{entry.food.name}</div>
                   <div className="entry-meta">
-                    {entry.grams} g · {Math.round((entry.food.per100.kcal * entry.grams) / 100)} kcal
+                    {Math.round((entry.food.per100.kcal * entry.grams) / 100)} kcal
                   </div>
                 </div>
+                <input
+                  className="gram-input"
+                  type="number"
+                  min={1}
+                  value={entry.grams}
+                  onChange={(e) =>
+                    updateLogEntryGrams(todayKey(), entry.id, Number(e.target.value) || 0)
+                  }
+                  aria-label="Cantidad en gramos"
+                />
+                <span className="entry-meta">g</span>
                 <button
                   className="icon-btn"
                   aria-label="Eliminar"

@@ -11,6 +11,7 @@ interface AppState {
 
   setGoals: (goals: Goals) => void
   addLogEntry: (date: string, food: FoodItem, grams: number, slot: MealSlot) => void
+  updateLogEntryGrams: (date: string, entryId: string, grams: number) => void
   removeLogEntry: (date: string, entryId: string) => void
 
   addFridgeItem: (food: FoodItem, grams: number) => void
@@ -48,6 +49,17 @@ export const useAppStore = create<AppState>()(
           }
           const existing = state.logsByDate[date] ?? []
           return { logsByDate: { ...state.logsByDate, [date]: [...existing, entry] } }
+        }),
+
+      updateLogEntryGrams: (date, entryId, grams) =>
+        set((state) => {
+          const existing = state.logsByDate[date] ?? []
+          return {
+            logsByDate: {
+              ...state.logsByDate,
+              [date]: existing.map((e) => (e.id === entryId ? { ...e, grams } : e)),
+            },
+          }
         }),
 
       removeLogEntry: (date, entryId) =>

@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState } from 'react'
+import { useMemo, useState } from 'react'
 import type { FoodItem } from '../types'
-import { searchFoods } from '../api/openFoodFacts'
+import { searchFoods } from '../search/foodSearch'
 import { useAppStore } from '../store'
 
 interface Props {
@@ -21,44 +21,19 @@ function makeCustomFood(name: string, kcal: number, protein: number, carbs: numb
 
 export function FoodSearchSheet({ title, confirmLabel, onConfirm, onClose }: Props) {
   const [query, setQuery] = useState('')
-  const [results, setResults] = useState<FoodItem[]>([])
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
   const [selected, setSelected] = useState<FoodItem | null>(null)
   const [grams, setGrams] = useState(100)
   const [showManual, setShowManual] = useState(false)
   const customFoods = useAppStore((s) => s.customFoods)
   const addCustomFood = useAppStore((s) => s.addCustomFood)
-  const abortRef = useRef<AbortController | null>(null)
 
-  useEffect(() => {
-    if (query.trim().length < 2) {
-      setResults([])
-      return
-    }
-    const handle = setTimeout(async () => {
-      abortRef.current?.abort()
-      const controller = new AbortController()
-      abortRef.current = controller
-      setLoading(true)
-      setError(null)
-      try {
-        const found = await searchFoods(query, controller.signal)
-        setResults(found)
-      } catch (err) {
-        if ((err as Error).name !== 'AbortError') {
-          setError('No se pudo buscar en Open Food Facts. Revisa tu conexión.')
-        }
-      } finally {
-        setLoading(false)
-      }
-    }, 400)
-    return () => clearTimeout(handle)
-  }, [query])
+  const results = useMemo(() => searchFoods(query), [query])
 
-  const localMatches = customFoods.filter((f) =>
-    f.name.toLowerCase().includes(query.trim().toLowerCase()),
-  )
+  const myMatches = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    if (q.length < 2) return []
+    return customFoods.filter((f) => f.name.toLowerCase().includes(q))
+  }, [customFoods, query])
 
   if (selected) {
     const macros = {
@@ -125,13 +100,10 @@ export function FoodSearchSheet({ title, confirmLabel, onConfirm, onClose }: Pro
           />
         </div>
 
-        {loading && <p className="entry-meta">Buscando…</p>}
-        {error && <p className="entry-meta">{error}</p>}
-
-        {localMatches.length > 0 && (
+        {myMatches.length > 0 && (
           <>
             <div className="section-title">Tus alimentos</div>
-            {localMatches.map((f) => (
+            {myMatches.map((f) => (
               <div key={f.id} className="search-result" onClick={() => setSelected(f)}>
                 <div>
                   <div className="name">{f.name}</div>
@@ -145,12 +117,11 @@ export function FoodSearchSheet({ title, confirmLabel, onConfirm, onClose }: Pro
 
         {results.length > 0 && (
           <>
-            <div className="section-title">Open Food Facts</div>
+            <div className="section-title">Alimentos comunes</div>
             {results.map((f) => (
               <div key={f.id} className="search-result" onClick={() => setSelected(f)}>
                 <div>
                   <div className="name">{f.name}</div>
-                  {f.brand && <div className="meta">{f.brand}</div>}
                 </div>
                 <div className="kcal">{Math.round(f.per100.kcal)} kcal/100g</div>
               </div>
@@ -158,8 +129,10 @@ export function FoodSearchSheet({ title, confirmLabel, onConfirm, onClose }: Pro
           </>
         )}
 
-        {!loading && query.trim().length >= 2 && results.length === 0 && localMatches.length === 0 && (
-          <p className="empty-state">Sin resultados para "{query}"</p>
+        {query.trim().length >= 2 && results.length === 0 && myMatches.length === 0 && (
+          <p className="empty-state">
+            Sin resultados para "{query}". Pruébalo con otro nombre o añádelo manualmente.
+          </p>
         )}
 
         <button className="btn-secondary" style={{ width: '100%', marginTop: 8 }} onClick={() => setShowManual(true)}>
